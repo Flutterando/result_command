@@ -1,12 +1,49 @@
-# Result Command
+
+# <center>Result Command</center>
 
 **Result Command** is a lightweight package that brings the **Command Pattern** to Flutter, allowing you to encapsulate actions, track their execution state, and manage results with clarity. Perfect for simplifying complex workflows, ensuring robust error handling, and keeping your UI reactive.
+
+<center>
+
+[![Version](https://img.shields.io/github/v/release/Flutterando/result_command?style=plastic)](https://pub.dev/packages/result_command)
+[![Pub Points](https://img.shields.io/pub/points/result_command?label=pub%20points&style=plastic)](https://pub.dev/packages/result_command/score)
+[![Flutterando Analysis](https://img.shields.io/badge/style-flutterando__analysis-blueviolet?style=plastic)](https://pub.dev/packages/flutterando_analysis/)
+
+[![Pub Publisher](https://img.shields.io/pub/publisher/result_command?style=plastic)](https://pub.dev/publishers/flutterando.com.br/packages)
+
+</center>
+
+---
+
+## Table of Contents
+
+- [Getting Started](#getting-started)
+- [Why Use Result Command?](#why-use-result-command)
+- [How It Works](#how-it-works)
+- [Command State (`CommandState`)](#command-state-commandstate)
+  - [Accessing the State](#accessing-the-state)
+  - [Reacting to State Changes](#reacting-to-state-changes)
+- [State History (`CommandHistory`)](#state-history-commandhistory)
+  - [Configuring the History](#configuring-the-history)
+  - [Accessing the History](#accessing-the-history)
+- [Getters for State Checks](#getters-for-state-checks)
+- [Examples](#examples)
+  - [Example 1: Simple Command with No Arguments](#example-1-simple-command-with-no-arguments)
+  - [Example 2: Simple Command with Timeout](#example-2-simple-command-with-timeout)
+  - [Example 3: Command with Arguments](#example-3-command-with-arguments)
+  - [Example 4: Binding State to the UI](#example-4-binding-state-to-the-ui)
+  - [Example 5: Cancellation](#example-5-cancellation)
+  - [Example 5: using the map function](#example-5-using-the-map-function)
+  - [Minimal Usage: Handling Only Success State and orElse](#minimal-usage-handling-only-success-state-and-orelse)
+- [Benefits for Your Team](#benefits-for-your-team)
+- [Contribute](#contribute)
 
 ---
 
 ## Getting Started
 
 1. Add the package to your `pubspec.yaml`:
+
    ```yaml
    dependencies:
      result_command: x.x.x
@@ -56,7 +93,9 @@ Each `Command` exposes its current state through a `CommandState`. The state rep
 - **`CancelledCommand`**: The action was explicitly stopped.
 
 ### Accessing the State
+
 You can access the current state using the `value` property of the command:
+
 ```dart
 final command = Command0<String>(() async {
   return Success('Hello, World!');
@@ -67,7 +106,9 @@ print(command.value); // Outputs: SuccessCommand<String>
 ```
 
 ### Reacting to State Changes
+
 The state updates automatically as the command executes:
+
 - Use `addListener` for manual handling.
 - Use `ValueListenableBuilder` to bind the state to your UI.
 
@@ -102,26 +143,31 @@ history.forEach(print);
 To simplify state management and improve code readability, the following getters are available:
 
 - **`isIdle`**: Checks if the command is in the idle state.
+
   ```dart
   bool get isIdle => value is IdleCommand<T>;
   ```
 
 - **`isRunning`**: Checks if the command is currently running.
+
   ```dart
   bool get isRunning => value is RunningCommand<T>;
   ```
 
 - **`isCancelled`**: Checks if the command has been cancelled.
+
   ```dart
   bool get isCancelled => value is CancelledCommand<T>;
   ```
 
 - **`isSuccess`**: Checks if the command execution was successful.
+
   ```dart
   bool get isSuccess => value is SuccessCommand<T>;
   ```
 
 - **`isFailure`**: Checks if the command execution failed.
+
   ```dart
   bool get isFailure => value is FailureCommand<T>;
   ```
@@ -135,6 +181,7 @@ These getters allow you to write cleaner and more intuitive code when interactin
 ### Example 1: Simple Command with No Arguments
 
 Encapsulate a simple action into a reusable `Command`:
+
 ```dart
 final fetchGreetingCommand = Command0<String>(
   () async {
@@ -185,6 +232,7 @@ fetchGreetingCommand //
 ### Example 3: Command with Arguments
 
 Pass input to your command's action:
+
 ```dart
 final calculateSquareCommand = Command1<int, int>(
   (number) async {
@@ -215,6 +263,7 @@ calculateSquareCommand.execute(4);
 ### Example 4: Binding State to the UI
 
 Use `ValueListenableBuilder` to update the UI automatically:
+
 ```dart
 final loginCommand = Command2<bool, String, String>(
   (username, password) async {
@@ -254,6 +303,7 @@ Widget build(BuildContext context) {
 ### Example 5: Cancellation
 
 Cancel long-running commands gracefully:
+
 ```dart
 
 Isolate? _uploadIsolate;
@@ -280,11 +330,12 @@ Future.delayed(Duration(seconds: 3), () {
 });
 ```
 
---- 
+---
 
 ### Example 5: using the map function
 
 Cancel long-running commands gracefully:
+
 ```dart
 
 final calculateSquareCommand = Command1<int, int>(
@@ -337,8 +388,8 @@ Widget build(BuildContext context) {
 }
 ```
 
-
 #### Minimal Usage: Handling Only Success State and orElse
+
 ```dart
 
 final calculateSquareCommand = Command1<int, int>(
@@ -365,11 +416,12 @@ calculateSquareCommand.addListener(() {
 calculateSquareCommand.execute(4);
 ```
 
-**Notes**
- - The function ensures type safety by requiring `data to handle the `success` state explicitly.
- - The `orElse` callback is useful for dealing with unexpected states or adding default behavior.
+#### **Notes**
 
-----
+- The function ensures type safety by requiring `data to handle the`success` state explicitly.
+- The `orElse` callback is useful for dealing with unexpected states or adding default behavior.
+
+---
 
 ## Benefits for Your Team
 
@@ -378,8 +430,6 @@ calculateSquareCommand.execute(4);
 - **Maintainability**: Cleaner separation of concerns reduces technical debt.
 
 ---
-
-
 
 ## Contribute
 
