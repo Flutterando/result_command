@@ -1,3 +1,7 @@
+## 2.2.0
+
+* ADDED: Stream support in `CommandRef`.
+
 ## 2.1.0
 * ADDED: `filter` method for deriving transformed values from command states.
 * ADDED: `CommandRef` class for listening to changes in `ValueListenables` and executing actions dynamically.

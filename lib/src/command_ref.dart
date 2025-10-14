@@ -1,5 +1,7 @@
 part of 'command.dart';
 
+typedef CommandRefAction0<W> = W Function(Reference ref);
+
 /// Represents a command that listens to changes in one or more ValueListenables and executes an action.
 ///
 /// The `CommandRef` class allows you to define a reference function (`ref`) that derives values from
@@ -38,20 +40,11 @@ final class CommandRef<T extends Object, W> extends Command<T> {
   /// The action to be executed based on the derived values.
   final CommandAction1<T, W> _action;
 
-  /// A set of ValueListenables being observed.
-  final Set<ValueListenable> _listenables = {};
-
-  /// Derives a value from a ValueListenable and adds it to the set of observed listenables.
-  V _ref<V>(ValueListenable<V> listenable) {
-    if (!_listenables.contains(listenable)) {
-      _listenables.add(listenable);
-      listenable.addListener(_innerExecute);
-    }
-    return listenable.value;
-  }
+  late final Reference _ref;
 
   /// Creates a CommandRef with the specified reference function and action.
   CommandRef(this._refAction, this._action) {
+    _ref = Reference(_innerExecute);
     _refAction(_ref);
   }
 
@@ -63,10 +56,81 @@ final class CommandRef<T extends Object, W> extends Command<T> {
   /// Disposes the CommandRef and cleans up listeners.
   @override
   void dispose() {
-    for (final listenable in _listenables) {
-      listenable.removeListener(_innerExecute);
-    }
-    _listenables.clear();
+    _ref.dispose();
     super.dispose();
+  }
+}
+
+class Reference {
+  final Future<void> Function() _innerExecute;
+  final _disposers = <void Function()>[];
+  final _innerValueNotifiers = <ValueNotifier>[];
+  final _executionQueue = <Future<void> Function()>[];
+
+  var _innerValueNotifiersCount = 0;
+  var _isProcessingQueue = false;
+
+  Reference(this._innerExecute);
+
+  V call<V>(ValueListenable<V> listenable) {
+    _disposers.add(() => listenable.removeListener(_enqueueExecution));
+    listenable.addListener(_enqueueExecution);
+    return listenable.value;
+  }
+
+  V stream<V>(Stream<V> stream, V initialValue) {
+    final notifier = _innerValueNotifiers.length > _innerValueNotifiersCount
+        ? _innerValueNotifiers[_innerValueNotifiersCount] as ValueNotifier<V>
+        : ValueNotifier<V>(initialValue);
+
+    if (_innerValueNotifiers.length <= _innerValueNotifiersCount) {
+      _innerValueNotifiers.add(notifier);
+      final subscription = stream.listen((event) {
+        notifier.value = event;
+      });
+
+      _disposers.add(() {
+        subscription.cancel();
+      });
+
+      _innerValueNotifiersCount++;
+      return call(notifier);
+    }
+
+    _innerValueNotifiersCount++;
+
+    return notifier.value;
+  }
+
+  void _enqueueExecution() {
+    _executionQueue.add(() async {
+      _innerValueNotifiersCount = 0;
+      await _innerExecute();
+    });
+
+    _processQueue();
+  }
+
+  Future<void> _processQueue() async {
+    if (_isProcessingQueue) return;
+    _isProcessingQueue = true;
+
+    while (_executionQueue.isNotEmpty) {
+      final execute = _executionQueue.removeAt(0);
+      await execute();
+    }
+
+    _isProcessingQueue = false;
+  }
+
+  void dispose() {
+    _executionQueue.clear();
+
+    for (final disposer in _disposers) {
+      disposer();
+    }
+
+    _innerValueNotifiers.clear();
+    _disposers.clear();
   }
 }

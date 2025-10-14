@@ -11,6 +11,3 @@ typedef CommandAction1<T extends Object, A> = AsyncResult<T> Function(A);
 /// A function that defines a command action with two arguments of types [A] and [B].
 /// The action returns an [AsyncResult] of type [T].
 typedef CommandAction2<T extends Object, A, B> = AsyncResult<T> Function(A, B);
-
-typedef CommandRefAction0<W> = W Function(
-    V Function<V>(ValueListenable<V> listenable));

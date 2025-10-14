@@ -201,9 +201,9 @@ This method simplifies state management by allowing you to focus on specific asp
 
 ### 7. CommandRef
 
-The `CommandRef` class allows you to create commands that listen to changes in one or more `ValueListenables` and execute actions based on derived values.
+The `CommandRef` class allows you to create commands that listen to changes in one or more `ValueListenables` or `Streams` and execute actions based on derived values.
 
-#### Example:
+#### Example with ValueListenable:
 ```dart
 final listenable = ValueNotifier<int>(0);
 
@@ -222,12 +222,33 @@ commandRef.addListener(() {
 listenable.value = 5; // Executes the command with the value 5.
 ```
 
-#### Features:
-- Automatically listens to changes in `ValueListenables`.
-- Executes the action whenever the derived value changes.
-- Cleans up listeners when disposed.
+#### Example with Stream:
+```dart
+final streamController = StreamController<int>();
 
-This class is ideal for scenarios where commands need to react dynamically to external state changes.
+final commandRef = CommandRef<int, int>(
+  (ref) => ref.stream(streamController.stream, 0), // 0 is the initial value
+  (value) async => Success(value * 3),
+);
+
+commandRef.addListener(() {
+  final status = commandRef.value;
+  if (status is SuccessCommand<int>) {
+    print('Result: ${status.value}');
+  }
+});
+
+streamController.add(10); // Executes the command with the value 10.
+```
+
+#### Features:
+- Automatically listens to changes in `ValueListenables` using `ref(listenable)`.
+- Converts `Streams` to synchronous values using `ref.stream(stream, initialValue)`.
+- Executes the action whenever the derived value changes.
+- Processes executions sequentially in a queue to avoid race conditions.
+- Cleans up listeners and stream subscriptions when disposed.
+
+This class is ideal for scenarios where commands need to react dynamically to external state changes from multiple sources.
 
 
 ## Documentation
