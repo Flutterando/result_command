@@ -137,6 +137,68 @@ sealed class Command<T extends Object> extends ChangeNotifier
         metadata: metadata ?? {'reason': 'Command reset'});
   }
 
+  /// Adds a listener that executes specific callbacks based on command state changes.
+  ///
+  /// This method provides a convenient way to listen to command state changes and react
+  /// with appropriate callbacks. Each state has its corresponding optional callback, and if no
+  /// callback is provided for the current state, the [orElse] callback will be executed if provided.
+  ///
+  /// The listener will be triggered immediately with the current state, and then every time
+  /// the command state changes.
+  ///
+  /// Returns a [VoidCallback] that can be called to remove the listener.
+  ///
+  /// Example:
+  /// ```dart
+  /// final command = Command0<String>(() async {
+  ///   return Success('Hello, World!');
+  /// });
+  ///
+  /// final removeListener = command.addWhenListener(
+  ///   onIdle: () => print('Command is ready'),
+  ///   onRunning: () => print('Command is executing'),
+  ///   onSuccess: (value) => print('Success: $value'),
+  ///   onFailure: (error) => print('Error: $error'),
+  ///   onCancelled: () => print('Command was cancelled'),
+  ///   orElse: () => print('Unknown state'),
+  /// );
+  ///
+  /// // Later, remove the listener
+  /// removeListener();
+  /// ```
+  VoidCallback addWhenListener({
+    void Function()? onIdle,
+    void Function()? onRunning,
+    void Function(T value)? onSuccess,
+    void Function(Exception? exception)? onFailure,
+    void Function()? onCancelled,
+    void Function()? orElse,
+  }) {
+    void listener() {
+      switch (value) {
+        case IdleCommand<T>():
+          (onIdle ?? orElse)?.call();
+        case CancelledCommand<T>():
+          (onCancelled ?? orElse)?.call();
+        case RunningCommand<T>():
+          (onRunning ?? orElse)?.call();
+        case FailureCommand<T>(:final error):
+          onFailure != null ? onFailure(error) : orElse?.call();
+        case SuccessCommand<T>(:final value):
+          onSuccess != null ? onSuccess(value) : orElse?.call();
+      }
+    }
+
+    // Execute immediately with current state
+    listener();
+
+    // Add listener for future state changes
+    addListener(listener);
+
+    // Return a function to remove the listener
+    return () => removeListener(listener);
+  }
+
   /// Executes the given [action] and updates the command state accordingly.
   ///
   /// The state transitions to [RunningCommand] during execution,

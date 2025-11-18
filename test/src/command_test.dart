@@ -523,6 +523,179 @@ void main() {
       command1.execute().then((_) => command2.execute());
     });
   });
+
+  group('Command addWhenListener tests', () {
+    setUp(() {
+      // Reset the global observer to avoid interference with other tests
+      Command.setObserverListener((state) {});
+    });
+
+    test('addWhenListener executes immediately with current state', () {
+      final command = Command0<String>(() async => const Success('test'));
+      var idleCalled = false;
+
+      command.addWhenListener(onIdle: () => idleCalled = true);
+
+      expect(idleCalled, isTrue);
+    });
+
+    test('addWhenListener calls onSuccess when command succeeds', () async {
+      final command = Command0<String>(() async => const Success('test value'));
+      var successCalled = false;
+      String? receivedValue;
+
+      command.addWhenListener(
+        onSuccess: (value) {
+          successCalled = true;
+          receivedValue = value;
+        },
+      );
+
+      await command.execute();
+
+      expect(successCalled, isTrue);
+      expect(receivedValue, equals('test value'));
+    });
+
+    test('addWhenListener calls onFailure when command fails', () async {
+      final testException = Exception('test error');
+      final command = Command0<String>(() async => Failure(testException));
+      var failureCalled = false;
+      Exception? receivedException;
+
+      command.addWhenListener(
+        onFailure: (exception) {
+          failureCalled = true;
+          receivedException = exception;
+        },
+      );
+
+      await command.execute();
+
+      expect(failureCalled, isTrue);
+      expect(receivedException, equals(testException));
+    });
+
+    test('addWhenListener calls onRunning during command execution', () async {
+      final command = Command0<String>(() async {
+        await Future.delayed(const Duration(milliseconds: 50));
+        return const Success('test');
+      });
+      var runningSeen = false;
+
+      command.addWhenListener(onRunning: () => runningSeen = true);
+
+      await command.execute();
+
+      expect(runningSeen, isTrue);
+    });
+
+    test('addWhenListener calls onCancelled when command is cancelled', () async {
+      final command = Command0<String>(() async {
+        await Future.delayed(const Duration(seconds: 2));
+        return const Success('test');
+      });
+      var cancelledCalled = false;
+
+      command.addWhenListener(onCancelled: () => cancelledCalled = true);
+
+      command.execute();
+      command.cancel();
+
+      expect(cancelledCalled, isTrue);
+    });
+
+    test('addWhenListener calls orElse as fallback', () async {
+      final command = Command0<String>(() async => const Success('test'));
+      var elseCalled = false;
+
+      command.addWhenListener(
+        onFailure: (error) => {},
+        orElse: () => elseCalled = true,
+      );
+
+      await command.execute();
+
+      expect(elseCalled, isTrue);
+    });
+
+    test('addWhenListener removes listener correctly', () async {
+      final command = Command0<String>(() async => const Success('test'));
+      var callCount = 0;
+
+      final removeListener = command.addWhenListener(
+        onSuccess: (value) => callCount++,
+      );
+
+      await command.execute();
+      expect(callCount, equals(1));
+
+      removeListener();
+      command.reset();
+      await command.execute();
+
+      expect(callCount, equals(1)); // Should still be 1 because listener was removed
+    });
+
+    test('addWhenListener supports multiple independent listeners', () async {
+      final command = Command0<String>(() async => const Success('test'));
+      var listener1Called = false;
+      var listener2Called = false;
+
+      command.addWhenListener(onSuccess: (value) => listener1Called = true);
+      final removeListener2 = command.addWhenListener(onSuccess: (value) => listener2Called = true);
+
+      await command.execute();
+
+      expect(listener1Called, isTrue);
+      expect(listener2Called, isTrue);
+
+      // Reset and remove one listener
+      command.reset();
+      removeListener2();
+      listener1Called = false;
+      listener2Called = false;
+
+      await command.execute();
+
+      expect(listener1Called, isTrue);
+      expect(listener2Called, isFalse);
+    });
+
+    test('addWhenListener works with Command1', () async {
+      final command = Command1<String, int>((value) async => Success('Result: $value'));
+      var successCalled = false;
+      String? receivedValue;
+
+      command.addWhenListener(
+        onSuccess: (value) {
+          successCalled = true;
+          receivedValue = value;
+        },
+      );
+
+      await command.execute(42);
+
+      expect(successCalled, isTrue);
+      expect(receivedValue, equals('Result: 42'));
+    });
+
+    test('addWhenListener handles listener exceptions gracefully', () async {
+      final command = Command0<String>(() async => const Success('test'));
+      var commandCompleted = false;
+
+      command.addWhenListener(
+        onSuccess: (value) => throw Exception('Listener error'),
+      );
+
+      // Command should complete normally despite listener exception
+      await command.execute();
+      commandCompleted = true;
+
+      expect(commandCompleted, isTrue);
+      expect(command.value, isA<SuccessCommand<String>>());
+    });
+  });
 }
 
 class AppException implements Exception {
